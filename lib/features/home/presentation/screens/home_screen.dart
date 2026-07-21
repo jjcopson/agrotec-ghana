@@ -191,25 +191,6 @@ class HomeTabContent extends ConsumerWidget {
                 icon: Stack(
                   children: [
                     const Icon(Icons.notifications_outlined),
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        width: 16,
-                        height: 16,
-                        decoration: const BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Center(
-                          child: Text('3',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
                 onPressed: () => context.go(AppConstants.routeNotifications),

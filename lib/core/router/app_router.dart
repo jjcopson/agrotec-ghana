@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show Ref;
 
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/onboarding_screen.dart';
@@ -36,8 +37,10 @@ import '../constants/app_constants.dart';
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
 
-  return GoRouter(
+  // Listen to auth changes and refresh router
+  final router = GoRouter(
     initialLocation: AppConstants.routeSplash,
+    refreshListenable: _AuthChangeNotifier(ref),
     redirect: (context, state) {
       final isAuthenticated = authState.value != null;
       final loc = state.matchedLocation;
@@ -48,9 +51,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           loc.startsWith('/role-select') ||
           loc.startsWith('/verification');
 
+      // Not logged in and trying to access protected route → go to login
       if (!isAuthenticated && !isAuthRoute) {
         return AppConstants.routeLogin;
       }
+
+      // Logged in and on auth route (except splash) → go to home
+      if (isAuthenticated &&
+          (loc.startsWith('/login') || loc.startsWith('/register'))) {
+        return AppConstants.routeHome;
+      }
+
       return null;
     },
     routes: [
@@ -230,4 +241,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ),
   );
+  return router;
 });
+
+// Notifier that triggers router refresh when auth state changes
+class _AuthChangeNotifier extends ChangeNotifier {
+  _AuthChangeNotifier(Ref ref) {
+    ref.listen(authStateProvider, (_, __) {
+      notifyListeners();
+    });
+  }
+}

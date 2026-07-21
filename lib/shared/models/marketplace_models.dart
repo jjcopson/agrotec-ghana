@@ -92,6 +92,7 @@ class ListingModel {
       pickupAvailable: json['pickup_available'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      // seller info optional - only present when joined
       sellerName: seller?['full_name'] as String?,
       sellerAvatar: seller?['avatar_url'] as String?,
       sellerVerified: seller?['is_verified'] as bool?,

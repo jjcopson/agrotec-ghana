@@ -92,6 +92,62 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Check if user is verified before allowing listing
+    final uid = SupabaseService.currentUserId!;
+    final userData = await SupabaseService.client
+        .from('users')
+        .select('is_verified, roles')
+        .eq('id', uid)
+        .single();
+
+    final isVerified = userData['is_verified'] as bool? ?? false;
+    final roles = (userData['roles'] as List?)?.map((r) => r.toString()).toList() ?? [];
+
+    // Customers and enthusiasts cannot post listings
+    final canSell = roles.any((r) =>
+        r == 'farmer' || r == 'retailer' || r == 'wholesaler' ||
+        r == 'processing_industry');
+
+    if (!canSell) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Only farmers, retailers, wholesalers and processors can post listings. Update your role in Profile.'),
+          backgroundColor: AppColors.warning,
+          duration: Duration(seconds: 4),
+        ));
+      }
+      return;
+    }
+
+    if (!isVerified) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Verification Required'),
+            content: const Text(
+                'You need to verify your account before posting products. This builds trust with buyers.\n\nGo to Profile → Verification to submit your documents.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Later'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.go(AppConstants.routeVerification);
+                },
+                child: const Text('Verify Now'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {

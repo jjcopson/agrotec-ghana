@@ -10,7 +10,8 @@ import '../../../../shared/models/marketplace_models.dart';
 import '../../../../shared/widgets/app_avatar.dart';
 import '../../../../features/auth/providers/auth_provider.dart';
 
-final _categories = [
+// ── Category definitions ────────────────────────────────────────────────────
+const _categories = [
   ('all', 'All', '🛒'),
   ('crops', 'Crops', '🌾'),
   ('livestock', 'Livestock', '🐄'),
@@ -21,36 +22,7 @@ final _categories = [
   ('fertilizers', 'Fertilizers', '🧪'),
 ];
 
-final _listingsProvider =
-    FutureProvider.family<List<ListingModel>, Map<String, String>>(
-        (ref, filters) async {
-  // Build filter list first, then apply order/limit
-  final category = filters['category'];
-  final region = filters['region'];
-  final search = filters['search'];
-
-  dynamic query = SupabaseService.client
-      .from('marketplace_listings')
-      .select('*, users(full_name, avatar_url, is_verified)')
-      .eq('status', 'active');
-
-  if (category != null && category != 'all') {
-    query = (query as dynamic).eq('category', category);
-  }
-  if (region != null && region.isNotEmpty) {
-    query = (query as dynamic).eq('region', region);
-  }
-  if (search != null && search.isNotEmpty) {
-    query = (query as dynamic).ilike('title', '%$search%');
-  }
-
-  final data = await (query as dynamic)
-      .order('created_at', ascending: false)
-      .limit(AppConstants.defaultPageSize);
-
-  return (data as List).map((e) => ListingModel.fromJson(e)).toList();
-});
-
+// ── Marketplace Screen ───────────────────────────────────────────────────────
 class MarketplaceScreen extends ConsumerStatefulWidget {
   const MarketplaceScreen({super.key});
 
@@ -61,8 +33,18 @@ class MarketplaceScreen extends ConsumerStatefulWidget {
 class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
   String _selectedCategory = 'all';
   String _selectedRegion = '';
-  final _searchController = TextEditingController();
   String _searchQuery = '';
+  final _searchController = TextEditingController();
+
+  List<ListingModel> _listings = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadListings();
+  }
 
   @override
   void dispose() {
@@ -70,21 +52,67 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
     super.dispose();
   }
 
-  Map<String, String> get _filters => {
-        'category': _selectedCategory,
-        'region': _selectedRegion,
-        'search': _searchQuery,
-      };
+  Future<void> _loadListings() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      // Simple direct Supabase query — no chaining after order/limit
+      final data = await SupabaseService.client
+          .from('marketplace_listings')
+          .select(
+              'id, seller_id, title, description, category, price_ghs, unit, '
+              'quantity, quantity_available, images, location, region, status, '
+              'views_count, is_negotiable, delivery_available, pickup_available, '
+              'created_at, updated_at, tags')
+          .eq('status', 'active')
+          .order('created_at', ascending: false)
+          .limit(50);
+
+      final all = (data as List)
+          .map((e) => ListingModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      setState(() {
+        _listings = all;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Filter listings client-side
+  List<ListingModel> get _filtered {
+    return _listings.where((l) {
+      if (_selectedCategory != 'all' && l.category != _selectedCategory) {
+        return false;
+      }
+      if (_selectedRegion.isNotEmpty && l.region != _selectedRegion) {
+        return false;
+      }
+      if (_searchQuery.isNotEmpty &&
+          !l.title.toLowerCase().contains(_searchQuery.toLowerCase())) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authNotifierProvider).value;
     final isSeller = user != null &&
+        user.isVerified &&
         (user.isFarmer ||
             user.isRetailer ||
             user.isWholesaler ||
             user.isBusiness);
-    final listingsAsync = ref.watch(_listingsProvider(_filters));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -96,16 +124,20 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
             icon: const Icon(Icons.tune_outlined),
             onPressed: () => _showRegionFilter(context),
           ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadListings,
+          ),
         ],
       ),
       floatingActionButton: isSeller
           ? FloatingActionButton.extended(
-              onPressed: () => context.go('/marketplace/create'),
+              onPressed: () => context.go(AppConstants.routeCreateListing),
               backgroundColor: AppColors.primary,
               icon: const Icon(Icons.add, color: Colors.white),
               label: Text('Sell',
-                  style:
-                      AppTextStyles.labelLarge.copyWith(color: Colors.white)),
+                  style: AppTextStyles.labelLarge
+                      .copyWith(color: Colors.white)),
             )
           : null,
       body: Column(
@@ -115,8 +147,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: TextField(
               controller: _searchController,
-              onChanged: (v) =>
-                  setState(() => _searchQuery = v),
+              onChanged: (v) => setState(() => _searchQuery = v),
               decoration: InputDecoration(
                 hintText: 'Search produce, equipment...',
                 prefixIcon: const Icon(Icons.search, size: 20),
@@ -145,10 +176,11 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
             height: 52,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               itemCount: _categories.length,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, i) {
+              itemBuilder: (_, i) {
                 final cat = _categories[i];
                 final isSelected = _selectedCategory == cat.$1;
                 return GestureDetector(
@@ -191,10 +223,10 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
             ),
           ),
 
-          // Region filter chip (if active)
+          // Region chip
           if (_selectedRegion.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
               child: Row(
                 children: [
                   Chip(
@@ -212,44 +244,116 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
               ),
             ),
 
-          // Listings grid
-          Expanded(
-            child: listingsAsync.when(
-              loading: () => const Center(
-                  child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-              data: (listings) {
-                if (listings.isEmpty) {
-                  return _EmptyState(
-                    category: _selectedCategory,
-                    onClear: () => setState(() {
-                      _selectedCategory = 'all';
-                      _selectedRegion = '';
-                      _searchQuery = '';
-                      _searchController.clear();
-                    }),
-                  );
-                }
-                return GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 0.72,
-                  ),
-                  itemCount: listings.length,
-                  itemBuilder: (context, i) => _ListingCard(
-                    listing: listings[i],
-                    onTap: () => context
-                        .go('/marketplace/listing/${listings[i].id}'),
-                  ),
-                );
-              },
-            ),
-          ),
+          // Content
+          Expanded(child: _buildContent()),
         ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    if (_isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: AppColors.primary),
+            SizedBox(height: 16),
+            Text('Loading listings...'),
+          ],
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.wifi_off, size: 48, color: AppColors.error),
+              const SizedBox(height: 16),
+              Text('Could not load listings',
+                  style: AppTextStyles.headlineSmall),
+              const SizedBox(height: 8),
+              Text(_error!,
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.textSecondary),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: _loadListings,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try Again'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final listings = _filtered;
+
+    if (listings.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🛒', style: TextStyle(fontSize: 48)),
+              const SizedBox(height: 16),
+              Text(
+                _listings.isEmpty
+                    ? 'No listings yet'
+                    : 'No results found',
+                style: AppTextStyles.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _listings.isEmpty
+                    ? 'Be the first to list a product!'
+                    : 'Try a different category or search term.',
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              if (_listings.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => setState(() {
+                    _selectedCategory = 'all';
+                    _selectedRegion = '';
+                    _searchQuery = '';
+                    _searchController.clear();
+                  }),
+                  child: const Text('Clear filters'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadListings,
+      color: AppColors.primary,
+      child: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.72,
+        ),
+        itemCount: listings.length,
+        itemBuilder: (_, i) => _ListingCard(
+          listing: listings[i],
+          onTap: () =>
+              context.go('/marketplace/listing/${listings[i].id}'),
+        ),
       ),
     );
   }
@@ -258,22 +362,15 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Column(
-        mainAxisSize: MainAxisSize.min,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => ListView(
+        shrinkWrap: true,
         children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2)),
-          ),
           const SizedBox(height: 16),
-          Text('Filter by Region',
-              style: AppTextStyles.headlineSmall),
+          Center(
+            child: Text('Filter by Region',
+                style: AppTextStyles.headlineSmall),
+          ),
           const SizedBox(height: 8),
           ListTile(
             title: const Text('All Regions'),
@@ -306,6 +403,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
   }
 }
 
+// ── Listing Card ─────────────────────────────────────────────────────────────
 class _ListingCard extends StatelessWidget {
   final ListingModel listing;
   final VoidCallback onTap;
@@ -321,6 +419,13 @@ class _ListingCard extends StatelessWidget {
           color: AppColors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,12 +440,12 @@ class _ListingCard extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: listing.thumbnailUrl,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(
-                            color: AppColors.surfaceVariant),
+                        placeholder: (_, __) =>
+                            Container(color: AppColors.surfaceVariant),
                         errorWidget: (_, __, ___) =>
-                            _PlaceholderImage(category: listing.category),
+                            _PlaceholderImg(listing.category),
                       )
-                    : _PlaceholderImage(category: listing.category),
+                    : _PlaceholderImg(listing.category),
               ),
             ),
 
@@ -355,62 +460,38 @@ class _ListingCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Row(
                     children: [
                       Text(
                         '${AppConstants.currencySymbol}${listing.priceGhs.toStringAsFixed(2)}',
-                        style: AppTextStyles.priceText.copyWith(
-                            fontSize: 15),
+                        style: AppTextStyles.priceText.copyWith(fontSize: 15),
                       ),
-                      Text(
-                        '/${listing.unit}',
-                        style: AppTextStyles.bodySmall,
-                      ),
+                      Text('/${listing.unit}',
+                          style: AppTextStyles.bodySmall),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      AppAvatar(
-                        imageUrl: listing.sellerAvatar,
-                        name: listing.sellerName,
-                        size: 16,
-                        showVerified: listing.sellerVerified ?? false,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          listing.sellerName ?? 'Seller',
-                          style: AppTextStyles.bodySmall
-                              .copyWith(fontSize: 10),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (listing.region != null) ...[
-                    const SizedBox(height: 4),
+                  if (listing.region != null)
                     Row(
                       children: [
                         const Icon(Icons.location_on_outlined,
-                            size: 10,
-                            color: AppColors.textTertiary),
+                            size: 10, color: AppColors.textTertiary),
                         const SizedBox(width: 2),
-                        Text(
-                          listing.region!,
-                          style: AppTextStyles.labelSmall
-                              .copyWith(fontSize: 9),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Expanded(
+                          child: Text(
+                            listing.region!,
+                            style: AppTextStyles.labelSmall
+                                .copyWith(fontSize: 9),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
-                  ],
-                  if (listing.isNegotiable) ...[
-                    const SizedBox(height: 4),
+                  if (listing.isNegotiable)
                     Container(
+                      margin: const EdgeInsets.only(top: 4),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
@@ -425,7 +506,6 @@ class _ListingCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                  ],
                 ],
               ),
             ),
@@ -436,9 +516,9 @@ class _ListingCard extends StatelessWidget {
   }
 }
 
-class _PlaceholderImage extends StatelessWidget {
+class _PlaceholderImg extends StatelessWidget {
   final String category;
-  const _PlaceholderImage({required this.category});
+  const _PlaceholderImg(this.category);
 
   @override
   Widget build(BuildContext context) {
@@ -457,39 +537,6 @@ class _PlaceholderImage extends StatelessWidget {
         child: Text(
           emojis[category] ?? '🛒',
           style: const TextStyle(fontSize: 40),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final String category;
-  final VoidCallback onClear;
-  const _EmptyState({required this.category, required this.onClear});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🔍', style: TextStyle(fontSize: 48)),
-            const SizedBox(height: 16),
-            Text('No listings found',
-                style: AppTextStyles.headlineSmall),
-            const SizedBox(height: 8),
-            Text(
-              'Try a different category or region.',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            TextButton(onPressed: onClear, child: const Text('Clear filters')),
-          ],
         ),
       ),
     );
