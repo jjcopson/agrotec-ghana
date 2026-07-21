@@ -1,0 +1,35 @@
+name: Build & Deploy AgroTec Ghana Web
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-web:
+    name: Build Flutter Web
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.2'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build web
+        run: flutter build web --release --base-href /
+
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: agrotec-ghana-web
+          path: build/web/
+          retention-days: 30
