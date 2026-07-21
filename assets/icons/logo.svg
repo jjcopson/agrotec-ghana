@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!-- Gear background -->
+  <g transform="translate(60,62)">
+    <!-- Gear shape -->
+    <path d="
+      M0,-38 L4,-33 L13,-36 L16,-27 L24,-22 L21,-13 L26,-5 L18,0 
+      L18,9 L26,14 L21,22 L24,31 L16,36 L13,27 L4,30 L0,38 
+      L-4,30 L-13,27 L-16,36 L-24,31 L-21,22 L-26,14 L-18,9 
+      L-18,0 L-26,-5 L-21,-13 L-24,-22 L-16,-27 L-13,-36 L-4,-33 Z"
+      fill="#2DD4BF" fill-opacity="0.25" stroke="#0D9488" stroke-width="1.5"/>
+    <!-- Gear center hole -->
+    <circle cx="0" cy="0" r="12" fill="white" fill-opacity="0.9"/>
+  </g>
+
+  <!-- Soil mound -->
+  <ellipse cx="60" cy="88" rx="28" ry="7" fill="#5C3D1E" opacity="0.85"/>
+
+  <!-- Main stem -->
+  <line x1="60" y1="88" x2="60" y2="52" stroke="#16A34A" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Left leaf -->
+  <path d="M60,68 Q42,58 44,44 Q56,50 60,68" fill="#22C55E" opacity="0.95"/>
+  <!-- Left leaf vein -->
+  <path d="M60,68 Q52,56 46,46" stroke="#16A34A" stroke-width="0.8" fill="none" opacity="0.7"/>
+
+  <!-- Right leaf -->
+  <path d="M60,63 Q78,53 76,39 Q64,45 60,63" fill="#4ADE80" opacity="0.95"/>
+  <!-- Right leaf vein -->
+  <path d="M60,63 Q69,51 75,41" stroke="#16A34A" stroke-width="0.8" fill="none" opacity="0.7"/>
+
+  <!-- Top sprout tip -->
+  <path d="M60,52 Q55,42 58,34 Q63,40 60,52" fill="#86EFAC"/>
+
+  <!-- Soil texture lines -->
+  <line x1="46" y1="87" x2="42" y2="87" stroke="#7C5533" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+  <line x1="74" y1="87" x2="78" y2="87" stroke="#7C5533" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+  <line x1="50" y1="90" x2="47" y2="90" stroke="#7C5533" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+  <line x1="70" y1="90" x2="73" y2="90" stroke="#7C5533" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Small gear bolt dots on main gear -->
+  <circle cx="60" cy="26" r="2" fill="#0D9488" opacity="0.7"/>
+  <circle cx="60" cy="98" r="2" fill="#0D9488" opacity="0.7"/>
+  <circle cx="24" cy="62" r="2" fill="#0D9488" opacity="0.7"/>
+  <circle cx="96" cy="62" r="2" fill="#0D9488" opacity="0.7"/>
+</svg>
