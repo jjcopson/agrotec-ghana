@@ -4,9 +4,9 @@ class AppConstants {
   AppConstants._();
 
   // App Info
-  static const String appName = 'Agrotech Ghana';
+  static const String appName = 'AgroTec Ghana';
   static const String appVersion = '1.0.0';
-  static const String appTagline = 'Connecting Ghana\'s Agricultural Future';
+  static const String appTagline = 'Connecting the Agricultural Ecosystem';
 
   // Supabase
   static const String supabaseUrl = 'https://dzavfprgmnwdxzyjxivq.supabase.co';

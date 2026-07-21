@@ -114,8 +114,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: Colors.white.withOpacity(0.8),
                       ),
-                    ),
-                    const SizedBox(height: 60),
+                    ),                    const SizedBox(height: 60),
                     SizedBox(
                       width: 28,
                       height: 28,

@@ -191,7 +191,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              Text('Join Agrotech Ghana',
+              Text('Join AgroTec Ghana',
                   style: AppTextStyles.headlineMedium),
               const SizedBox(height: 4),
               Text(

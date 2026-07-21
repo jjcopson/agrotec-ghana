@@ -1,11 +1,11 @@
 {
-    "name": "agrotech_ghana",
-    "short_name": "agrotech_ghana",
+    "name": "AgroTec Ghana",
+    "short_name": "AgroTec",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0D9488",
+    "theme_color": "#0D9488",
+    "description": "AgroTec Ghana — Connecting the Agricultural Ecosystem",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

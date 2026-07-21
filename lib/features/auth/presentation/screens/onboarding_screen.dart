@@ -29,8 +29,7 @@ const _pages = [
     emoji: '🌾',
     gradientStart: Color(0xFF0F766E),
     gradientEnd: Color(0xFF2DD4BF),
-  ),
-  _OnboardPage(
+  ),  _OnboardPage(
     title: 'Expert\nConsultations',
     subtitle: 'Get professional advice from certified agricultural experts, lecturers, and consultants. First 10 minutes free.',
     emoji: '🎓',

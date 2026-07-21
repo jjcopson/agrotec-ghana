@@ -29,7 +29,7 @@ class AgrotechGhanaApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: 'Agrotech Ghana',
+      title: 'AgroTec Ghana',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
