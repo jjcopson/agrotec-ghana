@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Soil mound -->
+  <ellipse cx="85" cy="148" rx="38" ry="10" fill="#7C4F1E" opacity="0.9"/>
+
+  <!-- Plant stem -->
+  <path d="M85,148 Q83,120 80,95" stroke="#2E7D32" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Left leaf -->
+  <path d="M82,115 Q60,100 58,80 Q75,85 82,115" fill="#388E3C"/>
+  <path d="M82,115 Q70,98 60,82" stroke="#2E7D32" stroke-width="1" fill="none" opacity="0.6"/>
+
+  <!-- Right leaf -->
+  <path d="M80,100 Q100,85 102,65 Q85,72 80,100" fill="#4CAF50"/>
+  <path d="M80,100 Q91,83 101,67" stroke="#2E7D32" stroke-width="1" fill="none" opacity="0.6"/>
+
+  <!-- Top sprout -->
+  <path d="M80,95 Q76,78 79,62 Q84,72 80,95" fill="#81C784"/>
+
+  <!-- Letter A left leg (green) -->
+  <line x1="79" y1="95" x2="55" y2="148" stroke="#2E7D32" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Green crossbar of A -->
+  <rect x="60" y="132" width="28" height="8" rx="2" fill="#388E3C"/>
+
+  <!-- Tech network lines (blue) -->
+  <!-- Main diagonal line -->
+  <line x1="85" y1="95" x2="148" y2="158" stroke="#1565C0" stroke-width="4" stroke-linecap="round"/>
+  <!-- Upper branch -->
+  <line x1="85" y1="95" x2="130" y2="75" stroke="#1976D2" stroke-width="3" stroke-linecap="round"/>
+  <!-- Cross connector -->
+  <line x1="107" y1="120" x2="130" y2="75" stroke="#1976D2" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Network nodes (dots) -->
+  <circle cx="85" cy="95" r="6" fill="#1565C0"/>
+  <circle cx="130" cy="75" r="5.5" fill="#F9A825"/>
+  <circle cx="107" cy="120" r="5" fill="#42A5F5"/>
+  <circle cx="148" cy="158" r="6" fill="#1565C0"/>
+  <circle cx="120" cy="138" r="4" fill="#F9A825"/>
+</svg>
