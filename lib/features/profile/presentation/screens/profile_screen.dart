@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' if (dart.library.io) 'dart:io' as html;
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -15,6 +13,7 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_avatar.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/role_badge.dart';
+import '../../../../features/auth/providers/auth_provider.dart';
 import '../../../../features/auth/providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -130,17 +129,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
     if (confirmed != true) return;
 
-    await ref.read(authNotifierProvider.notifier).signOut();
+    // Sign out from Supabase — clears session everywhere
+    await SupabaseService.auth.signOut();
 
     if (!mounted) return;
-
-    // On web, force a full reload to clear all cached state
-    if (kIsWeb) {
-      // ignore: avoid_web_libraries_in_flutter
-      html.window.location.replace('/');
-    } else {
-      context.go(AppConstants.routeLogin);
-    }
+    context.go(AppConstants.routeLogin);
   }
 
   @override
