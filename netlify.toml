@@ -1,0 +1,8 @@
+[build]
+  command = "if ! command -v flutter &> /dev/null; then wget -q https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.32.2-stable.tar.xz -O /tmp/flutter.tar.xz && tar xf /tmp/flutter.tar.xz -C /opt && export PATH=$PATH:/opt/flutter/bin; fi && export PATH=$PATH:/opt/flutter/bin && flutter config --no-analytics && flutter pub get && flutter build web --release --base-href /"
+  publish = "build/web"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

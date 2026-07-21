@@ -1,0 +1,9 @@
+{
+  "buildCommand": "if ! command -v flutter &> /dev/null; then git clone https://github.com/flutter/flutter.git --depth 1 -b stable /opt/flutter && export PATH=$PATH:/opt/flutter/bin && flutter config --no-analytics; fi && export PATH=$PATH:/opt/flutter/bin && flutter build web --release --base-href /; ",
+  "outputDirectory": "build/web",
+  "installCommand": "echo 'Flutter handled in buildCommand'",
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
