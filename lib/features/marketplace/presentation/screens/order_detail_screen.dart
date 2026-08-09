@@ -7,8 +7,10 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/services/payment_service.dart';
+import '../../../../features/auth/providers/auth_provider.dart';
 import '../../../../shared/models/marketplace_models.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/payment_sheet.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -63,6 +65,33 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       setState(() => _escrowCountdown =
           remaining.isNegative ? Duration.zero : remaining);
     });
+  }
+
+  Future<void> _payNow(OrderModel o) async {
+    final user = ref.read(authNotifierProvider).value;
+    final email = user?.email ?? '';
+
+    await showPaymentSheet(
+      context: context,
+      amountGhs: o.totalGhs,
+      title: 'Pay for Order',
+      subtitle: 'Order #${o.id.substring(0, 8).toUpperCase()}',
+      onPay: (method, momoNumber) async {
+        await PaymentService.payForOrder(
+          context: context,
+          orderId: o.id,
+          buyerId: o.buyerId,
+          sellerId: o.sellerId,
+          email: email,
+          amountGhs: o.totalGhs,
+          method: method,
+          momoNumber: momoNumber,
+        );
+      },
+    );
+
+    // Reload order to reflect updated status
+    await _load();
   }
 
   Future<void> _confirmDelivery() async {
@@ -218,6 +247,15 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             const SizedBox(height: 32),
 
             // Action buttons (buyer only)
+            if (isBuyer && o.isPending) ...[
+              AppButton(
+                label: 'Pay Now — ${AppConstants.currencySymbol}${o.totalGhs.toStringAsFixed(2)}',
+                onPressed: _isActing ? null : () => _payNow(o),
+                isLoading: _isActing,
+              ),
+              const SizedBox(height: 12),
+            ],
+
             if (isBuyer && o.canConfirmDelivery) ...[
               AppButton(
                 label: 'Confirm Delivery & Release Payment',

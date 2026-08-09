@@ -6,9 +6,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../../core/services/payment_service.dart';
+import '../../../../features/auth/providers/auth_provider.dart';
 import '../../../../shared/models/marketplace_models.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_avatar.dart';
+import '../../../../shared/widgets/payment_sheet.dart';
 
 class ListingDetailScreen extends ConsumerStatefulWidget {
   final String listingId;
@@ -402,7 +405,6 @@ class _OrderSheet extends ConsumerStatefulWidget {
 }
 
 class _OrderSheetState extends ConsumerState<_OrderSheet> {
-  String _paymentMethod = 'wallet';
   bool _isProcessing = false;
   final _addressController = TextEditingController();
 
@@ -414,13 +416,17 @@ class _OrderSheetState extends ConsumerState<_OrderSheet> {
 
   Future<void> _placeOrder() async {
     setState(() => _isProcessing = true);
-    try {
-      final l = widget.listing;
-      final total = l.priceGhs * widget.quantity;
-      final platformFee = total * AppConstants.platformMarketplaceFeePercent;
 
-      // Create order
-      final order = await SupabaseService.client
+    final l = widget.listing;
+    final total = l.priceGhs * widget.quantity;
+    final platformFee = total * AppConstants.platformMarketplaceFeePercent;
+    final grandTotal = total + platformFee;
+
+    Map<String, dynamic>? order;
+
+    try {
+      // Step 1: Create order with pending_payment status
+      order = await SupabaseService.client
           .from('orders')
           .insert({
             'buyer_id': SupabaseService.currentUserId,
@@ -429,14 +435,13 @@ class _OrderSheetState extends ConsumerState<_OrderSheet> {
             'subtotal_ghs': total,
             'delivery_fee_ghs': 0,
             'platform_fee_ghs': platformFee,
-            'total_ghs': total + platformFee,
+            'total_ghs': grandTotal,
             'delivery_address': _addressController.text.trim(),
-            'payment_method': _paymentMethod,
           })
           .select()
           .single();
 
-      // Create order item
+      // Step 2: Create order item
       await SupabaseService.client.from('order_items').insert({
         'order_id': order['id'],
         'listing_id': l.id,
@@ -449,23 +454,52 @@ class _OrderSheetState extends ConsumerState<_OrderSheet> {
           'unit': l.unit,
         },
       });
-
-      if (!mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Order placed! Proceed to payment.'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-      context.go('/orders/${order['id']}');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+            .showSnackBar(SnackBar(content: Text('Error creating order: $e')));
       }
-    } finally {
       if (mounted) setState(() => _isProcessing = false);
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isProcessing = false);
+
+    // Step 3: Close this sheet and open the payment sheet
+    final orderId = order['id'] as String;
+    final navigator = Navigator.of(context);
+    final router = GoRouter.of(context);
+    navigator.pop(); // close _OrderSheet
+
+    final user = ref.read(authNotifierProvider).value;
+    final email = user?.email ?? '';
+
+    final paid = await showPaymentSheet(
+      context: context,
+      amountGhs: grandTotal,
+      title: 'Pay for Order',
+      subtitle: '${widget.quantity} × ${l.title}',
+      onPay: (method, momoNumber) async {
+        await PaymentService.payForOrder(
+          context: context,
+          orderId: orderId,
+          buyerId: SupabaseService.currentUserId!,
+          sellerId: l.sellerId,
+          email: email,
+          amountGhs: grandTotal,
+          method: method,
+          momoNumber: momoNumber,
+        );
+      },
+    );
+
+    // Step 4: Navigate to order detail regardless (user can pay later if dismissed)
+    if (paid == true) {
+      router.go('/orders/$orderId');
+    } else {
+      // Dismissed without paying — still go to order so they can retry
+      router.go('/orders/$orderId');
     }
   }
 
@@ -595,7 +629,7 @@ class _OrderSheetState extends ConsumerState<_OrderSheet> {
             const SizedBox(height: 24),
 
             AppButton(
-              label: 'Place Order',
+              label: 'Place Order & Pay',
               isLoading: _isProcessing,
               onPressed: _placeOrder,
             ),
@@ -629,50 +663,6 @@ class _Row extends StatelessWidget {
                       .copyWith(color: AppColors.primary)
                   : AppTextStyles.bodySmall),
         ],
-      ),
-    );
-  }
-}
-
-class _PayChip extends StatelessWidget {
-  final String value;
-  final String label;
-  final IconData icon;
-  final String selected;
-  final void Function(String) onTap;
-  const _PayChip(this.value, this.label, this.icon, this.selected, this.onTap);
-
-  @override
-  Widget build(BuildContext context) {
-    final isSelected = selected == value;
-    return GestureDetector(
-      onTap: () => onTap(value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primarySurface : AppColors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color:
-                  isSelected ? AppColors.primary : AppColors.border,
-              width: isSelected ? 1.5 : 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                size: 16,
-                color: isSelected
-                    ? AppColors.primary
-                    : AppColors.textSecondary),
-            const SizedBox(width: 4),
-            Text(label,
-                style: AppTextStyles.labelMedium.copyWith(
-                    color: isSelected
-                        ? AppColors.primary
-                        : AppColors.textSecondary)),
-          ],
-        ),
       ),
     );
   }
