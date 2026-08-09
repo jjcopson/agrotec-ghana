@@ -4,8 +4,16 @@ import 'package:url_launcher/url_launcher.dart';
 import 'supabase_service.dart';
 import '../constants/app_constants.dart';
 
-/// All payment methods supported
-enum PaymentMethod { wallet, momoMTN, momoVodafone, momoAirtelTigo, card, bankTransfer }
+// ── Payment Method Enum ──────────────────────────────────────────────────────
+
+enum PaymentMethod {
+  wallet,
+  momoMTN,
+  momoVodafone,
+  momoAirtelTigo,
+  card,
+  bankTransfer,
+}
 
 extension PaymentMethodX on PaymentMethod {
   String get label {
@@ -52,6 +60,8 @@ extension PaymentMethodX on PaymentMethod {
   }
 }
 
+// ── Payment Result ───────────────────────────────────────────────────────────
+
 class PaymentResult {
   final bool success;
   final String reference;
@@ -66,7 +76,12 @@ class PaymentResult {
   });
 }
 
+// ── Payment Service ──────────────────────────────────────────────────────────
+
 class PaymentService {
+  /// No-op initializer kept for backward compatibility
+  static Future<void> initialize() async {}
+
   /// Initialize a payment via Supabase edge function → Paystack
   static Future<PaymentResult> initializePayment({
     required BuildContext context,
@@ -77,11 +92,10 @@ class PaymentService {
     String? momoNumber,
   }) async {
     final reference = const Uuid().v4();
-
     try {
       final body = <String, dynamic>{
         'email': email,
-        'amount': (amountGhs * 100).toInt(), // pesewas
+        'amount': (amountGhs * 100).toInt(),
         'currency': 'GHS',
         'reference': reference,
         'metadata': {
@@ -105,21 +119,19 @@ class PaymentService {
 
       if (data['error'] != null) {
         return PaymentResult(
-          success: false,
-          reference: reference,
-          message: data['error'].toString(),
-        );
+            success: false,
+            reference: reference,
+            message: data['error'].toString());
       }
 
       final authUrl = data['authorization_url'] as String?;
 
-      // For MoMo — show waiting dialog (user gets USSD prompt on phone)
       if (method.isMomo && context.mounted) {
-        _showMoMoWaitingDialog(context, momoNumber ?? '', method);
+        _showMoMoDialog(context, momoNumber ?? '', method);
       }
 
-      // For card/bank — open Paystack URL
-      if ((method == PaymentMethod.card || method == PaymentMethod.bankTransfer) &&
+      if ((method == PaymentMethod.card ||
+              method == PaymentMethod.bankTransfer) &&
           authUrl != null) {
         final uri = Uri.parse(authUrl);
         if (await canLaunchUrl(uri)) {
@@ -128,32 +140,20 @@ class PaymentService {
       }
 
       return PaymentResult(
-        success: true,
-        reference: reference,
-        authorizationUrl: authUrl,
-      );
+          success: true, reference: reference, authorizationUrl: authUrl);
     } catch (e) {
       return PaymentResult(
-        success: false,
-        reference: reference,
-        message: e.toString(),
-      );
+          success: false, reference: reference, message: e.toString());
     }
   }
 
-  /// Show MoMo waiting dialog
-  static void _showMoMoWaitingDialog(
-    BuildContext context,
-    String phone,
-    PaymentMethod method,
-  ) {
+  static void _showMoMoDialog(
+      BuildContext context, String phone, PaymentMethod method) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _MoMoWaitingDialog(
-        phone: phone,
-        network: method.label,
-      ),
+      builder: (_) =>
+          _MoMoWaitingDialog(phone: phone, network: method.label),
     );
   }
 
@@ -166,20 +166,24 @@ class PaymentService {
     required PaymentMethod method,
     String? momoNumber,
   }) async {
-    if (method == PaymentMethod.wallet) {
-      throw Exception('Cannot top up wallet from wallet');
-    }
-
     await initializePayment(
       context: context,
       email: email,
       amountGhs: amountGhs,
       method: method,
       momoNumber: momoNumber,
-      metadata: {
-        'payment_type': 'wallet_topup',
-        'user_id': userId,
-      },
+      metadata: {'payment_type': 'wallet_topup', 'user_id': userId},
+    );
+  }
+
+  /// Release escrow (buyer confirms delivery)
+  static Future<void> releaseEscrow({
+    required String orderId,
+    required String triggeredBy,
+  }) async {
+    await SupabaseService.client.functions.invoke(
+      'release-escrow',
+      body: {'order_id': orderId, 'triggered_by': triggeredBy},
     );
   }
 
@@ -195,8 +199,7 @@ class PaymentService {
     String? momoNumber,
   }) async {
     if (method == PaymentMethod.wallet) {
-      // Deduct from wallet directly
-      final response = await SupabaseService.client.functions.invoke(
+      await SupabaseService.client.functions.invoke(
         'process-marketplace-payment',
         body: {
           'order_id': orderId,
@@ -206,12 +209,8 @@ class PaymentService {
           'payment_method': 'wallet',
         },
       );
-      return PaymentResult(
-        success: true,
-        reference: orderId,
-      );
+      return PaymentResult(success: true, reference: orderId);
     }
-
     return initializePayment(
       context: context,
       email: email,
@@ -251,7 +250,6 @@ class PaymentService {
       );
       return PaymentResult(success: true, reference: consultationId);
     }
-
     return initializePayment(
       context: context,
       email: email,
@@ -267,67 +265,74 @@ class PaymentService {
     );
   }
 
+  /// Withdraw from wallet to MoMo
+  static Future<void> withdrawFromWallet({
+    required String userId,
+    required double amountGhs,
+    required String momoNumber,
+    required String momoNetwork,
+  }) async {
+    await SupabaseService.client.functions.invoke(
+      'process-withdrawal',
+      body: {
+        'user_id': userId,
+        'amount_ghs': amountGhs,
+        'momo_number': momoNumber,
+        'momo_network': momoNetwork,
+      },
+    );
+  }
+
   static String formatGhs(double amount) =>
       '${AppConstants.currencySymbol}${amount.toStringAsFixed(2)}';
 }
 
-/// MoMo waiting dialog shown while user approves on their phone
-class _MoMoWaitingDialog extends StatefulWidget {
+// ── MoMo Waiting Dialog ──────────────────────────────────────────────────────
+
+class _MoMoWaitingDialog extends StatelessWidget {
   final String phone;
   final String network;
-
   const _MoMoWaitingDialog({required this.phone, required this.network});
 
   @override
-  State<_MoMoWaitingDialog> createState() => _MoMoWaitingDialogState();
-}
-
-class _MoMoWaitingDialogState extends State<_MoMoWaitingDialog> {
-  @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 8),
-          // Animated phone icon
           Container(
             width: 80,
             height: 80,
             decoration: BoxDecoration(
               color: const Color(0xFFFFF8E1),
               shape: BoxShape.circle,
-              border: Border.all(
-                  color: const Color(0xFFFFC107), width: 2),
+              border: Border.all(color: const Color(0xFFFFC107), width: 2),
             ),
             child: const Center(
-              child: Text('📱', style: TextStyle(fontSize: 36)),
-            ),
+                child: Text('📱', style: TextStyle(fontSize: 36))),
           ),
           const SizedBox(height: 20),
-          Text(
-            'Check your phone',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
+          const Text('Check your phone',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 12),
           Text(
-            'A payment prompt has been sent to\n${widget.phone}',
+            'A payment prompt has been sent to\n$phone',
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 14, color: Colors.black54),
           ),
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: const Color(0xFFFFF8E1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              'Approve the ${widget.network} prompt on your phone to complete payment.',
+              'Approve the $network prompt on your phone to complete payment.',
               textAlign: TextAlign.center,
               style: const TextStyle(
                   fontSize: 13, color: Color(0xFF795548)),
@@ -339,14 +344,12 @@ class _MoMoWaitingDialogState extends State<_MoMoWaitingDialog> {
             valueColor: AlwaysStoppedAnimation(Color(0xFF0D9488)),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Waiting for confirmation...',
-            style: TextStyle(fontSize: 12, color: Colors.black38),
-          ),
+          const Text('Waiting for confirmation...',
+              style: TextStyle(fontSize: 12, color: Colors.black38)),
           const SizedBox(height: 16),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('I\'ve approved — Close'),
+            child: const Text("I've approved — Close"),
           ),
         ],
       ),

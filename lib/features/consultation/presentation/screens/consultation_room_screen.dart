@@ -735,12 +735,18 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
   Future<void> _processPayment() async {
     setState(() => _isProcessing = true);
     try {
-      await PaymentService.payConsultation(
+      final email = SupabaseService.auth.currentUser?.email ?? '';
+      final method = _paymentMethod == 'wallet'
+          ? PaymentMethod.wallet
+          : PaymentMethod.momoMTN;
+      await PaymentService.payForConsultation(
+        context: context,
         consultationId: widget.consultation.id,
         clientId: widget.consultation.clientId,
         expertId: widget.consultation.expertId,
-        sessionPriceGhs: widget.consultation.sessionPriceGhs,
-        paymentMethod: _paymentMethod,
+        email: email,
+        amountGhs: widget.consultation.sessionPriceGhs,
+        method: method,
       );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {

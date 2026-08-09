@@ -68,9 +68,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   Future<void> _confirmDelivery() async {
     setState(() => _isActing = true);
     try {
-      await PaymentService.releaseEscrow(
-        orderId: widget.orderId,
-        triggeredBy: 'buyer_confirm',
+      await SupabaseService.client.functions.invoke(
+        'release-escrow',
+        body: {
+          'order_id': widget.orderId,
+          'triggered_by': 'buyer_confirm',
+        },
       );
       await SupabaseService.client
           .from('orders')
