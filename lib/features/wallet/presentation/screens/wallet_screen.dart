@@ -490,34 +490,26 @@ class _TopUpSheetState extends ConsumerState<_TopUpSheet> {
       final user = ref.read(authNotifierProvider).value;
       if (user == null) return;
 
-      if (_method == 'wallet') {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cannot top up from wallet')));
-        return;
-      }
+      final method = _method == 'momo'
+          ? PaymentMethod.momoMTN
+          : PaymentMethod.card;
 
-      final result = await PaymentService.chargeCard(
+      await PaymentService.topUpWallet(
         context: context,
+        userId: user.id,
         email: user.email,
         amountGhs: amount,
-        description: 'Wallet top-up',
+        method: method,
       );
 
-      if (result.success) {
-        await PaymentService.topUpWallet(
-          userId: user.id,
-          amountGhs: amount,
-          paystackRef: result.reference,
-        );
-        if (mounted) {
-          Navigator.pop(context);
-          widget.onSuccess();
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(
-                '${AppConstants.currencySymbol}${amount.toStringAsFixed(2)} added to wallet!'),
-            backgroundColor: AppColors.success,
-          ));
-        }
+      if (mounted) {
+        Navigator.pop(context);
+        widget.onSuccess();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Payment initiated for ${AppConstants.currencySymbol}${amount.toStringAsFixed(2)}'),
+          backgroundColor: AppColors.success,
+        ));
       }
     } catch (e) {
       if (mounted) {
