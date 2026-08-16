@@ -17,7 +17,13 @@ Install these tools before starting:
 ## Step 1 — Flutter setup
 
 ```bash
-# In the project root
+# Install Flutter (if not already installed)
+# Follow the official guide: https://docs.flutter.dev/get-started/install
+
+# Verify Flutter is installed
+flutter doctor
+
+# In the project root, install dependencies
 flutter pub get
 ```
 

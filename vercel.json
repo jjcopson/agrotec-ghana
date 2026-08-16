@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "git clone https://github.com/flutter/flutter.git --depth 1 -b stable $HOME/flutter && export PATH=$PATH:$HOME/flutter/bin && flutter config --no-analytics && flutter pub get && flutter build web --release --base-href /",
+  "buildCommand": "wget -q https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.32.2-stable.tar.xz -O /tmp/flutter.tar.xz && tar xf /tmp/flutter.tar.xz -C $HOME && export PATH=$PATH:$HOME/flutter/bin && flutter config --no-analytics --enable-web && flutter pub get && flutter build web --release --base-href /",
   "outputDirectory": "build/web",
-  "installCommand": "echo skip",
+  "installCommand": "echo 'skip'",
   "framework": null,
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
