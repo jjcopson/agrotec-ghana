@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -112,8 +111,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Center(
                   child: Column(
                     children: [
-                      SvgPicture.asset(
-                        'assets/icons/logo.svg',
+                      Image.asset(
+                        'assets/icons/logo.png',
                         width: 72,
                         height: 72,
                       ),
