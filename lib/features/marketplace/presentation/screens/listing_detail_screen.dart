@@ -667,3 +667,45 @@ class _Row extends StatelessWidget {
     );
   }
 }
+
+class _PayChip extends StatelessWidget {
+  final String value;
+  final String label;
+  final IconData icon;
+  final String groupValue;
+  final ValueChanged<String> onChanged;
+
+  const _PayChip(this.value, this.label, this.icon, this.groupValue, this.onChanged);
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = value == groupValue;
+    return GestureDetector(
+      onTap: () => onChanged(value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16,
+                color: selected ? Colors.white : AppColors.textSecondary),
+            const SizedBox(width: 6),
+            Text(label,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: selected ? Colors.white : AppColors.textSecondary,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+}
