@@ -406,6 +406,7 @@ class _OrderSheet extends ConsumerStatefulWidget {
 
 class _OrderSheetState extends ConsumerState<_OrderSheet> {
   bool _isProcessing = false;
+  String _paymentMethod = 'wallet';
   final _addressController = TextEditingController();
 
   @override
