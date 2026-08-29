@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "bash build.sh",
+  "buildCommand": "ls -la && bash build.sh",
   "outputDirectory": "build/web",
   "installCommand": "echo 'skip'",
   "framework": null,
