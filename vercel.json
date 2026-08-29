@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "export PATH=$PATH:$HOME/flutter/bin && flutter config --no-analytics --enable-web && flutter pub get && flutter build web --release --base-href /",
+  "buildCommand": "$HOME/flutter/bin/flutter config --no-analytics --enable-web && $HOME/flutter/bin/flutter pub get && $HOME/flutter/bin/flutter build web --release --base-href /",
   "outputDirectory": "build/web",
   "installCommand": "curl -sL https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.32.2-stable.tar.xz -o /tmp/flutter.tar.xz && tar xf /tmp/flutter.tar.xz -C $HOME",
   "framework": null,
